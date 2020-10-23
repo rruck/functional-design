@@ -28,9 +28,10 @@ object binary_values {
      *
      * for all `a`, `b`, `c`.
      */
-    type SomeType
+    type SomeType = String
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType =
+      left + right
   }
 
   object Exercise2 {
@@ -46,10 +47,16 @@ object binary_values {
      * }}}
      *
      * for all `a`, `b`, `c`.
+     *
+     * e.g.
+     * <
+     * >
+     * booleans
      */
-    type SomeType
+    type SomeType = Boolean
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType =
+      left && right
   }
 
   object Exercise3 {
@@ -65,10 +72,15 @@ object binary_values {
      * }}}
      *
      * for all `a`, `b`.
+     *
+     * +
+     * *
+     * intersection
      */
-    type SomeType
+    type SomeType = Set[Int]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType =
+      left intersect right
   }
 
   object Exercise4 {
@@ -101,9 +113,10 @@ object binary_values {
      * combine two queries into one query, such that both results would
      * be queried when the model is executed.
      */
-    type SomeType
+    type SomeType = Boolean
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType =
+      left & right
   }
 
   object Exercise6 {
@@ -114,9 +127,10 @@ object binary_values {
      * Choose or create a different type such that your implementation
      * of `compose` represents modeling "both".
      */
-    type SomeType
+    type SomeType[A] = List[A]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose[A](left: SomeType[A], right: SomeType[A]): SomeType[A] =
+      left ++ right
   }
 
   object Exercise7 {
@@ -129,9 +143,10 @@ object binary_values {
      * a data type that represents a query, then this `compose` could
      * model running one query, but if it fails, running another.
      */
-    type SomeType
+    type SomeType[+A] = Option[A]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose[A](left: SomeType[A], right: SomeType[A]): SomeType[A] =
+      left.orElse(right)
   }
 
   object Exercise8 {
@@ -161,11 +176,12 @@ object binary_values {
      *
      * for all `a`.
      */
-    type SomeType
+    type SomeType[A] = List[A]
 
-    def identity: SomeType = ???
+    def identity[A]: SomeType[A] = List.empty[A]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose[A](left: SomeType[A], right: SomeType[A]): SomeType[A] =
+      left ++ identity
   }
 
   object Exercise10 {
@@ -208,9 +224,10 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] =
+      left zip right
   }
 
   object Exercise2 {
@@ -227,9 +244,10 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] =
+      left zip right
   }
 
   object Exercise3 {
@@ -246,9 +264,11 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] =
+      left.map(Left(_)) ++ right.map(Right(_))
+
   }
 
   object Exercise4 {
@@ -284,9 +304,10 @@ object binary_tcs {
      *
      * for all `a`, `b`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] =
+      left zip right
   }
 
   object Exercise6 {
@@ -417,11 +438,12 @@ object binary_tcs {
      *
      * for all `a`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def identity: SomeType[Any] = ???
+    def identity: SomeType[Any] = List(())
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] =
+      left.flatMap(a => right.map(b => (a, b)))
   }
 
   object Exercise14 {

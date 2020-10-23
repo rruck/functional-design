@@ -1,5 +1,8 @@
 package net.degoes
 
+import java.security.Identity
+import cats.data.Validated.Valid
+
 /*
  * INTRODUCTION
  *
@@ -490,7 +493,9 @@ object cms {
  * that allow clients of the JSON endpoint to fix the issues with their data.
  */
 object input_validation {
-  sealed trait Json {
+  sealed trait Json { self =>
+    import JsonPath._
+    import Json._
 
     /**
      * EXERCISE 1
@@ -498,7 +503,31 @@ object input_validation {
      * Implement a method to retrieve the JSON value at the specified path, or
      * fail with a descriptive error message.
      */
-    def get(path: JsonPath): Either[String, Json] = ???
+    def get(path: JsonPath): Either[String, Json] = {
+      def loop(prefix: String, path: JsonPath, self: Json): Either[String, Json] =
+        path match {
+          case JsonPath.Identity => Right(self)
+          case Field(parent, name) =>
+            self match {
+              case Object(value) =>
+                value.get(name) match {
+                  case Some(self) => loop(prefix + s".$name", parent, self)
+                  case None       => Left(prefix + s"[$name] does not exist in $self")
+                }
+              case _ => Left(prefix + s".$name does not exist in $self")
+            }
+          case Index(parent, index) =>
+            self match {
+              case Sequence(values) =>
+                values.lift(index) match {
+                  case Some(self) => loop(prefix + s"[$index]", parent, self)
+                  case _          => Left(prefix + s"[$index] does not exist in $values")
+                }
+              case _ => Left(prefix + " is not an array")
+            }
+        }
+      loop("", path, self)
+    }
   }
   object Json {
     case object Null                                  extends Json
@@ -542,8 +571,52 @@ object input_validation {
    * 8. Verify that an element in an array meets certain requirements.
    * 9. Verify that all elements in an array meet certain requirements.
    */
-  type Validation[+A]
-  object Validation {}
+  sealed trait Validation[+A] { self =>
+    def flatMap[B](f: A => Validation[B]): Validation[B] = Validation.FlatMap(self, f)
+
+    def map[B](f: A => B): Validation[B] =
+      self.flatMap(a => Validation.const(f(a)))
+  }
+  object Validation {
+
+    case class Failure(message: String)                               extends Validation[Nothing]
+    case class Const[A](value: A)                                     extends Validation[A]
+    case object Identity                                              extends Validation[Json]
+    case class FlatMap[A, B](v: Validation[A], f: A => Validation[B]) extends Validation[B]
+    case class Zoom[A](path: JsonPath, scope: Validation[A])          extends Validation[A]
+
+    val success: Validation[Unit] = Const(())
+
+    def fail(message: String): Validation[Nothing] = Failure(message)
+
+    def const[A](value: A): Validation[A] = Const(value)
+
+    val identity: Validation[Json] = Identity
+
+    def extract(path: JsonPath): Validation[Json] = zoom(path)(identity)
+
+    def zoom[A](path: JsonPath): Validation[A] => Validation[A] = Zoom(path, _)
+
+    def predicate[A](f: Json => Either[String, A]): Validation[A] =
+      identity.flatMap { json =>
+        f(json) match {
+          case Left(error) => fail(error)
+          case Right(a)    => const(a)
+        }
+      }
+
+    def string: Validation[String] =
+      predicate {
+        case Json.Text(value) => Right(value)
+        case v                => Left(s"expected a String but found $v")
+      }
+
+    def int: Validation[Int] =
+      predicate {
+        case Json.Number(value) => Right(value.toInt)
+        case v                  => Left(s"expected a Number but found $v")
+      }
+  }
 
   /**
    * Implement the `validate` function that can validate some JSON and either

@@ -69,7 +69,7 @@ object education_executable {
      * Add an operator `+` that appends this quiz to the specified quiz. Model
      * this as pure data using a constructor for Quiz in the companion object.
      */
-    def +(that: Quiz2): Quiz2 = ???
+    def +(that: Quiz2): Quiz2 = Quiz2.Sequential(self, that)
 
     /**
      * EXERCISE 2
@@ -77,10 +77,15 @@ object education_executable {
      * Add a unary operator `bonus` that marks this quiz as a bonus quiz. Model
      * this as pure data using a constructor for Quiz in the companion object.
      */
-    def bonus: Quiz2 = ???
+    def bonus: Quiz2 = Quiz2.Bonus(self)
   }
   object Quiz2 {
-    def apply[A](question: Question[A]): Quiz2 = ???
+    final case class Sequential(left: Quiz2, right: Quiz2) extends Quiz2
+    final case class Single(question: Question[_])         extends Quiz2
+    final case class Bonus(value: Quiz2)                   extends Quiz2
+
+    def apply[A](question: Question[A]): Quiz2 =
+      Single(question)
   }
 
   /**
@@ -90,7 +95,19 @@ object education_executable {
    * the interactive console operations that it describes, returning a
    * QuizResult value.
    */
-  def run(quiz: Quiz2): QuizResult = ???
+  def run(quiz: Quiz2): QuizResult = {
+    import Quiz2._
+
+    def translate(quiz: Quiz2): Quiz2[_] =
+      quiz match {
+        case Sequential(left, right) => translate(left) + translate(right)
+        case Single(question)        => Quiz2(question)
+        case Bonus(quiz)             => translate(quiz).bonus
+      }
+
+    translate(quiz).run()._1
+  }
+
 }
 
 /**
@@ -437,15 +454,39 @@ object ecommerce_marketing {
    * a match.
    */
   object executable_encoding {
-    type Pattern
+    final case class Pattern(matches: List[Event] => (List[Event], Boolean)) { self =>
+      def +(that: Pattern): Pattern = Pattern { history =>
+        val (leftHistory, leftMatch) = self.loop(history)
+
+        if (leftMatch) that.loop(leftHistory) else (leftHistory, leftMatch)
+      }
+
+      def loop(history: List[Event]): (List[Event], Boolean) = ???
+    }
+
     object Pattern {
-      val hasAnyAttribute: Pattern = ???
+      val hasAnyAttribute: Pattern =
+        partial {
+          case _ :: tail => (tail, true)
+        }
 
-      def hasAttribute(attr: Attribute): Pattern = ???
+      def hasAttribute(attr: Attribute): Pattern =
+        partial {
+          case head :: tail => (tail, head.contains(attr))
+        }
 
-      def hasValue(attr: Attribute, value: Value): Pattern = ???
+      def hasValue(attr: Attribute, value: Value): Pattern =
+        partial {
+          case head :: tail => (tail, head.get(attr) == Some(value))
+        }
 
-      def partial(pf: PartialFunction[List[Event], (List[Event], Boolean)]): Pattern = ???
+      def partial(pf: PartialFunction[List[Event], (List[Event], Boolean)]): Pattern =
+        Pattern { events =>
+          pf.lift(events) match {
+            case Some(value) => value
+            case None        => (events, false)
+          }
+        }
     }
   }
 }
